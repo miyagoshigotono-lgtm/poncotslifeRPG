@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#f4e6c0">
+<title>ポンコツライフRPG</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-color: #fceeb5; 
+    --line-color: #2b2b2b;
+    --panel-bg: #ffffff;
+    --window-bg: #1e3050; 
+    --window-border: #f8f8f8;
+    --btn-color1: #ff6b6b; 
+    --btn-color2: #4ecdc4; 
+    --highlight: #ffd166;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body { 
+    background: var(--bg-color); 
+    background-image: radial-gradient(#d4c698 1px, transparent 1px);
+    background-size: 20px 20px;
+    font-family: 'DotGothic16', monospace; 
+    color: var(--line-color); 
+    height: 100dvh; overflow: hidden;
+    display: flex; justify-content: center; align-items: flex-start;
+  }
+  
+  #app {
+    width: 100%; max-width: 420px; height: 100%;
+    display: flex; flex-direction: column; gap: 12px;
+    padding: 12px; overflow-y: auto; position: relative;
+  }
+  #app::-webkit-scrollbar { display: none; }
+
+  .panel {
+    background: var(--panel-bg);
+    border: 4px solid var(--line-color);
+    border-radius: 12px;
+    box-shadow: 4px 6px 0px rgba(43,43,43,0.3);
+    padding: 12px; position: relative;
+    transition: transform 0.2s;
+  }
+
+  #status-area { 
+    background: var(--window-bg); color: #fff;
+    border: 4px solid var(--window-border);
+    box-shadow: 0 0 0 4px var(--line-color), 4px 6px 0px rgba(43,43,43,0.3);
+    border-radius: 8px;
+  }
+  .status-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 20px; text-shadow: 2px 2px 0 #000; }
+  .exp-bar-wrap { width: 100%; height: 14px; border: 3px solid #000; background: #333; border-radius: 4px; overflow: hidden; margin-top: 4px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);}
+  .exp-fill { height: 100%; background: linear-gradient(90deg, #ff9e00, #ffd166); width: 0%; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+  .exp-label { font-size: 12px; text-align: right; margin-top: 2px; color: #ddd; }
+
+  .chara-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; border-bottom: 2px dashed #ccc; padding-bottom: 4px; }
+  .chara-title { font-size: 16px; }
+  .chara-subtitle { font-size: 12px; color: #666; background: #eee; padding: 2px 6px; border-radius: 4px; }
+  
+  #chara-view { 
+    width: 100%; aspect-ratio: 1; 
+    border: 4px solid var(--line-color); border-radius: 8px;
+    background-color: #87CEEB; 
+    background-image: url('bg_pop.png'); 
+    background-size: cover; background-position: center;
+    position: relative; overflow: hidden;
+    box-shadow: inset 0px 0px 20px rgba(0,0,0,0.3);
+  }
+
+  #chara-img { 
+    position: absolute; width: 40%; 
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    image-rendering: pixelated;
+    filter: drop-shadow(2px 4px 0px rgba(0,0,0,0.4));
+  }
+
+  /* アニメーション */
+  @keyframes breathe { 0%, 100% { transform: translate(-50%, -50%) scaleY(1); } 50% { transform: translate(-50%, -48%) scaleY(0.95); } }
+  .anim-idle { animation: breathe 2s infinite ease-in-out; }
+  .anim-walk { transition: left 0.3s linear, top 0.3s linear; }
+
+  @keyframes anim-spin { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+  @keyframes anim-squat { 0%, 100% { transform: translate(-50%, -50%) scale(1, 1); } 50% { transform: translate(-50%, -40%) scale(1.1, 0.8); } }
+  @keyframes anim-eat { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.3); } }
+  .anim-spin { animation: anim-spin 0.5s linear 2 !important; }
+  .anim-squat { animation: anim-squat 0.4s ease-in-out 3 !important; }
+  .anim-eat { animation: anim-eat 0.3s ease-in-out 4 !important; }
+
+  .falling-item { position: absolute; font-size: 32px; animation: dropItem 1.2s ease-in forwards; z-index: 10; pointer-events: none;}
+  @keyframes dropItem { 0% { top: -20%; opacity: 1; transform: translateX(-50%) scale(1) rotate(0deg); } 80% { top: 40%; opacity: 1; transform: translateX(-50%) scale(1.5) rotate(180deg); } 100% { top: 40%; opacity: 0; transform: translateX(-50%) scale(0) rotate(360deg); } }
+
+  #btn-area { display: flex; gap: 12px; }
+  .btn { 
+    flex: 1; background: var(--panel-bg); 
+    border: 4px solid var(--line-color); border-radius: 12px;
+    font-family: 'DotGothic16', monospace; font-size: 18px; font-weight: bold;
+    padding: 14px 4px; cursor: pointer; text-align: center;
+    box-shadow: 0px 6px 0px var(--line-color);
+    transition: all 0.1s; position: relative;
+  }
+  .btn:active { transform: translateY(6px); box-shadow: 0px 0px 0px var(--line-color); }
+  .btn-food { background: linear-gradient(180deg, #ff9a9e 0%, #fecfef 100%); color: #333; }
+  .btn-ex { background: linear-gradient(180deg, #a1c4fd 0%, #c2e9fb 100%); color: #333; }
+
+  /* ソシャゲ風ナビタブ (右端縦並び) */
+  #nav-tabs { 
+    position: absolute; right: 8px; top: 8px;
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 20; 
+  }
+  .nav-btn { 
+    position: relative; width: 46px; height: 46px; 
+    background: #fff;
+    border: 3px solid var(--line-color); border-radius: 50%; 
+    display: flex; justify-content: center; align-items: center; 
+    cursor: pointer; transition: transform 0.1s; 
+    box-shadow: 0 3px 0 var(--line-color); 
+  }
+  .nav-btn:active { transform: translateY(3px) scale(0.95); box-shadow: 0 0 0 rgba(0,0,0,0); }
+  .nav-icon { font-size: 24px; filter: drop-shadow(1px 1px 0px rgba(0,0,0,0.2)); }
+  .badge { position: absolute; top: -2px; right: -2px; background: #ff4757; color: #fff; font-size: 11px; font-weight: bold; padding: 2px 5px; border-radius: 10px; border: 2px solid #fff; box-shadow: 1px 1px 2px rgba(0,0,0,0.3); display: none; }
+  
+  /* リストアイテム (メール・クエスト) */
+  .list-item { border: 3px solid #ccc; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; background: #fafafa; }
+  .list-item-info { flex: 1; }
+  .list-item-title { font-weight: bold; font-size: 15px; margin-bottom: 4px; }
+  .list-item-desc { font-size: 12px; color: #666; }
+
+  .log-title { font-weight: bold; font-size: 16px; border-bottom: 2px solid var(--line-color); padding-bottom: 4px; margin-bottom: 8px; display: flex; justify-content: space-between;}
+  .log-row { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 6px; padding: 4px; background: #f9f9f9; border-radius: 4px; border-left: 4px solid var(--line-color); }
+
+  .modal-overlay { 
+    position: absolute; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px);
+    display: none; justify-content: center; align-items: flex-end; z-index: 100;
+  }
+  .modal-overlay.open { display: flex; animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  
+  .modal {
+    width: 100%; max-width: 420px; max-height: 85vh;
+    border-radius: 20px 20px 0 0; padding: 20px;
+    display: flex; flex-direction: column;
+  }
+  .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 12px; text-align: center; }
+  .modal-content { flex: 1; overflow-y: auto; margin-bottom: 12px; padding: 4px; }
+  .modal-actions { display: flex; gap: 12px; }
+  
+  input[type="number"], input[type="text"] { 
+    width: 100%; background: #f0f0f0; border: 4px solid var(--line-color); border-radius: 8px;
+    color: var(--line-color); font-family: 'DotGothic16', monospace; font-size: 20px;
+    padding: 12px; outline: none; margin-bottom: 12px; font-weight: bold;
+    box-shadow: inset 2px 2px 5px rgba(0,0,0,0.1);
+  }
+  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  
+  .ex-search-box { position: sticky; top: 0; background: var(--panel-bg); padding-bottom: 8px; display:flex; gap:4px; }
+  .ex-category { font-size: 12px; color: #888; margin: 8px 0 4px; font-weight: bold; }
+  .ex-item { 
+    border: 3px solid #ccc; border-radius: 8px; padding: 10px; margin-bottom: 8px; 
+    cursor: pointer; display: flex; justify-content: space-between; font-weight: bold;
+    transition: all 0.1s; background: #fafafa;
+  }
+  .ex-item:hover { border-color: var(--line-color); transform: scale(1.02); }
+  .ex-item.selected { background: var(--highlight); border-color: var(--line-color); color: #000; box-shadow: 2px 2px 0 #000;}
+
+  #toast { 
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(30,30,30,0.9); color: #fff; padding: 12px 24px; 
+    border-radius: 30px; text-align: center; display: none; font-weight: bold; z-index: 200;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 18px;
+  }
+
+  #death-overlay {
+    position: absolute; inset: 0; background: rgba(200,0,0,0.85);
+    display: none; flex-direction: column; justify-content: center; align-items: center;
+    color: #fff; z-index: 50; text-align: center; padding: 20px;
+  }
+  #death-icon { font-size: 70px; margin-bottom: 10px; animation: heartbeat 1s infinite; }
+  #death-title { font-size: 28px; font-weight: bold; color: #fff; text-shadow: 2px 2px 0 #000; margin-bottom: 10px; }
+  #death-desc { font-size: 16px; margin-bottom: 20px; line-height: 1.5; text-shadow: 1px 1px 0 #000; }
+  @keyframes heartbeat { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+  #bonus-effect {
+    position: absolute; inset: 0; pointer-events: none;
+    display: none; justify-content: center; align-items: center; z-index: 90;
+  }
+  .sparkle { font-size: 50px; position: absolute; animation: floatUp 1.5s ease-out forwards; filter: drop-shadow(0 0 10px gold); }
+
+  /* 家具配置用のスロット */
+  #room-items {
+    position: absolute; inset: 0; pointer-events: none; z-index: 5;
+  }
+  .room-slot {
+    position: absolute; font-size: 32px; filter: drop-shadow(2px 2px 0px rgba(0,0,0,0.5));
+    line-height: 1; transition: transform 0.2s;
+  }
+  .slot-wallLeft { left: 15%; top: 20%; }
+  .slot-wallRight { right: 15%; top: 20%; }
+  .slot-floorLeft { left: 15%; bottom: 15%; }
+  .slot-floorRight { right: 15%; bottom: 15%; }
+
+  /* トグルスイッチスタイル */
+  .switch-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: bold; }
+  .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 34px; border: 3px solid var(--line-color); }
+  .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; border: 2px solid var(--line-color); }
+  input:checked + .slider { background-color: var(--btn-color2); }
+  input:checked + .slider:before { transform: translateX(24px); }
+
+  /* メニュー項目やリストのスタイル調整 */
+  .menu-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .zukan-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .zukan-card { border: 3px solid #ccc; border-radius: 8px; padding: 8px; text-align: center; background: #fafafa; cursor: pointer; font-size: 11px; }
+  .zukan-card.locked { opacity: 0.5; background: #ddd; cursor: default; }
+  .zukan-card img { width: 50%; aspect-ratio: 1; image-rendering: pixelated; margin-bottom: 4px; }
+  .zukan-detail { border: 3px solid var(--line-color); border-radius: 8px; padding: 10px; background: #fff; margin-top: 12px; display: none; }
+  .zukan-detail-title { font-weight: bold; font-size: 16px; margin-bottom: 4px; border-bottom: 2px dashed #ccc; }
+
+  .shop-item { border: 3px solid #ccc; border-radius: 8px; padding: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; background: #fafafa; }
+  .shop-item-info { flex: 1; }
+  .shop-item-title { font-weight: bold; font-size: 15px; display: flex; align-items: center; gap: 4px; }
+  .shop-item-desc { font-size: 11px; color: #666; margin-top: 2px; }
+
+  .diary-item { border: 3px solid var(--line-color); border-radius: 8px; padding: 10px; margin-bottom: 8px; background: #fffdf0; box-shadow: 2px 2px 0px rgba(0,0,0,0.1); }
+  .diary-date { font-size: 12px; color: #888; font-weight: bold; border-bottom: 1px dashed #ccc; padding-bottom: 2px; margin-bottom: 4px; }
+  .diary-text { font-size: 14px; line-height: 1.4; }
+
+  .happen-body { font-size: 16px; line-height: 1.5; text-align: center; margin: 12px 0; border: 3px dashed var(--line-color); padding: 12px; background: #fffdf0; border-radius: 8px; }
+</style>
+</head>
+<body>
+<div id="app">
+  
+  <div class="panel" id="status-area">
+    <div class="status-row">
+      <span id="ui-chara-name">ぽんこちゃん</span>
+      <span id="ui-balance">3,000円</span>
+    </div>
+    <div style="font-size:14px; color:#ff9e00; margin-top:-2px; margin-bottom:4px; font-weight:bold; text-shadow: 1px 1px 0 #000;" id="ui-streak">🔥 連続運動: 0日</div>
+    <div class="exp-bar-wrap"><div class="exp-fill" id="ui-exp-fill"></div></div>
+    <div class="exp-label" id="ui-exp-label">次の段階まで --円</div>
+  </div>
+
+  <div class="panel" style="padding: 10px;">
+    <div class="chara-header">
+      <span class="chara-title" id="ui-stage-name">カツカツの生活</span>
+      <span class="chara-subtitle" id="ui-pattern-name">パターン判定中...</span>
+    </div>
+    <div id="chara-view">
+      <canvas id="chara-canvas" style="display:none;"></canvas>
+      <img src="" id="chara-img" class="anim-idle">
+      <div id="bonus-effect"></div>
+
+      <!-- 部屋の家具配置用 -->
+      <div id="room-items">
+        <div class="room-slot slot-wallLeft" id="slot-wallLeft"></div>
+        <div class="room-slot slot-wallRight" id="slot-wallRight"></div>
+        <div class="room-slot slot-floorLeft" id="slot-floorLeft"></div>
+        <div class="room-slot slot-floorRight" id="slot-floorRight"></div>
+      </div>
+
+      <div id="nav-tabs">
+        <div class="nav-btn" onclick="openMail()"><span class="nav-icon">📮</span><div class="badge" id="badge-mail"></div></div>
+        <div class="nav-btn" onclick="openQuest()"><span class="nav-icon">📜</span><div class="badge" id="badge-quest"></div></div>
+        <div class="nav-btn" onclick="openTimer()"><span class="nav-icon">⏱️</span></div>
+        <div class="nav-btn" onclick="openMenu()"><span class="nav-icon">📁</span></div>
+      </div>
+
+      <div id="death-overlay">
+         <div id="death-icon">⚠️</div>
+         <div id="death-title">餓死寸前！！</div>
+         <div id="death-desc">最終食事から24時間が経過した！<br>あと <span id="death-timer">24</span> 時間以内に食事を与えないと<br>本当に死んでしまうぞ！</div>
+         <button id="btn-rescue" class="btn" style="background:#fff; color:#d00;" onclick="rescueFood()">🍖 急いで食べさせる</button>
+         <button id="btn-restart" class="btn" style="display:none; background:#fff; color:#000;" onclick="resetGame()">最初から（転生）</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="btn-area">
+    <button class="btn btn-food" onclick="openFood()">🍖 食事</button>
+    <button class="btn btn-ex" onclick="openExercise()">⚔️ 運動</button>
+  </div>
+
+  <div class="panel">
+    <div class="log-title"><span>📜 今日の記録</span> <span style="font-size:12px; color:#888; font-weight:normal;">リセットまであと数時間</span></div>
+    <div id="log-list"></div>
+  </div>
+
+</div>
+
+<!-- 食事モーダル -->
+<div id="modal-food" class="modal-overlay" onclick="closeModalBg(event, 'modal-food')">
+  <div class="panel modal">
+    <div class="modal-title">🍖 食事を記録</div>
+    <div style="font-size:12px; color:#666; text-align:center; margin-bottom:8px;">※自炊や軽食でも最低300円から！</div>
+    <div class="modal-content">
+      <div class="preset-grid">
+        <button class="btn" style="padding:8px; font-size:14px;" onclick="setFood(300)">300円</button>
+        <button class="btn" style="padding:8px; font-size:14px;" onclick="setFood(800)">800円</button>
+        <button class="btn" style="padding:8px; font-size:14px;" onclick="setFood(1500)">1500円</button>
+        <button class="btn" style="padding:8px; font-size:14px; color:#ff6b6b; border-color:#ff6b6b;" onclick="setFood(3000)">3000円(豪遊)</button>
+      </div>
+      <input type="number" id="input-food" placeholder="金額(円)" min="300" inputmode="numeric">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" style="background:#eee;" onclick="closeModal('modal-food')">やめる</button>
+      <button class="btn btn-food" onclick="submitFood()">決定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 運動モーダル -->
+<div id="modal-ex" class="modal-overlay" onclick="closeModalBg(event, 'modal-ex')">
+  <div class="panel modal">
+    <div class="modal-title">⚔️ 運動を記録</div>
+    <div style="font-size:12px; color:#666; text-align:center; margin-bottom:8px;">※1日の上限は合計240分まで！</div>
+    <div class="modal-content">
+      <div class="ex-search-box">
+        <input type="text" id="search-ex" style="margin-bottom:0;" placeholder="🔍 運動名で検索..." oninput="filterExercises()">
+        <button class="btn" style="flex:0 0 50px; padding:0; background:#eee;" onclick="document.getElementById('search-ex').value=''; filterExercises();">✖</button>
+      </div>
+      <div id="ex-recent-list"></div>
+      <div id="ex-list"></div>
+    </div>
+    <div>
+      <input type="number" id="input-ex" placeholder="分数 (最大240)" max="240" inputmode="numeric">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" style="background:#eee;" onclick="closeModal('modal-ex')">やめる</button>
+      <button class="btn btn-ex" onclick="submitExercise()">決定</button>
+    </div>
+  </div>
+</div>
+
+<!-- メールモーダル -->
+<div id="modal-mail" class="modal-overlay" onclick="closeModalBg(event, 'modal-mail')">
+  <div class="panel modal">
+    <div class="modal-title">📮 ポスト</div>
+    <div class="modal-content" id="mail-list"></div>
+    <div class="modal-actions"><button class="btn" style="background:#eee;" onclick="closeModal('modal-mail')">閉じる</button></div>
+  </div>
+</div>
+
+<!-- クエストモーダル -->
+<div id="modal-quest" class="modal-overlay" onclick="closeModalBg(event, 'modal-quest')">
+  <div class="panel modal">
+    <div class="modal-title">📜 クエスト</div>
+    <div class="modal-content" id="quest-list"></div>
+    <div class="modal-actions"><button class="btn" style="background:#eee;" onclick="closeModal('modal-quest')">閉じる</button></div>
+  </div>
+</div>
+
+<!-- 計測モーダル -->
+<div id="modal-timer" class="modal-overlay" onclick="closeModalBg(event, 'modal-timer')">
+  <div class="panel modal">
+    <div class="modal-title">⏱️ 計測ツール</div>
+    <div style="font-size:12px; color:#666; text-align:center; margin-bottom:8px;">測定した時間を運動に記録できるぞい</div>
+    
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <button class="btn" id="tab-sw" onclick="switchTimerMode('sw')" style="background:var(--highlight); padding:8px; font-size:14px;">ストップウォッチ</button>
+      <button class="btn" id="tab-tm" onclick="switchTimerMode('tm')" style="background:var(--panel-bg); padding:8px; font-size:14px;">タイマー</button>
+    </div>
+
+    <div style="background:#000; color:#0f0; border:4px solid var(--line-color); border-radius:8px; padding:20px 10px; text-align:center; font-family:'Courier New', monospace; font-size:54px; font-weight:bold; text-shadow: 0 0 10px #0f0; margin-bottom:12px;" id="timer-display">
+      00:00
+    </div>
+
+    <div id="tm-input-area" style="display:none; text-align:center; margin-bottom:12px;">
+      <input type="number" id="tm-input" placeholder="分" style="width:100px; text-align:center; display:inline-block; margin:0;" min="1" value="5" oninput="if(!timerRunning) updateTimerDisplay()"> 分
+    </div>
+
+    <div class="preset-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom:4px;">
+      <button class="btn" style="padding:10px 4px; font-size:13px; background:#e74c3c; color:#fff;" onclick="resetTimer()">リセット</button>
+      <button class="btn" style="padding:10px 4px; font-size:13px; background:#f1c40f;" onclick="toggleTimer()" id="btn-timer-start">スタート</button>
+      <button class="btn" style="padding:10px 4px; font-size:13px; background:#2ecc71; color:#fff;" onclick="recordTimerTime()">記録へ送る</button>
+    </div>
+    
+    <div class="modal-actions" style="margin-top:12px;">
+      <button class="btn" style="background:#eee;" onclick="closeModal('modal-timer')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- メニューモーダル -->
+<div id="modal-menu" class="modal-overlay" onclick="closeModalBg(event, 'modal-menu')">
+  <div class="panel modal">
+    <div class="modal-title">📁 メニュー</div>
+    <div class="modal-content">
+      <div class="menu-btn-grid">
+        <button class="btn" onclick="openDiary()"><span style="font-size:24px;">📓</span><br>日記帳</button>
+        <button class="btn" onclick="openZukan()"><span style="font-size:24px;">🦖</span><br>もどき図鑑</button>
+        <button class="btn" onclick="openShop()"><span style="font-size:24px;">🛋️</span><br>模様替え</button>
+        <button class="btn" onclick="openConfig()"><span style="font-size:24px;">⚙️</span><br>設定</button>
+      </div>
+    </div>
+    <div class="modal-actions"><button class="btn" style="background:#eee;" onclick="closeModal('modal-menu')">閉じる</button></div>
+  </div>
+</div>
+
+<!-- 日記帳モーダル -->
+<div id="modal-diary" class="modal-overlay" onclick="closeModalBg(event, 'modal-diary')">
+  <div class="panel modal">
+    <div class="modal-title">📓 ポンコツ日記</div>
+    <div class="modal-content" id="diary-list"></div>
+    <div class="modal-actions"><button class="btn" style="background:#eee;" onclick="closeModal('modal-diary')">戻る</button></div>
+  </div>
+</div>
+
+<!-- もどき図鑑モーダル -->
+<div id="modal-zukan" class="modal-overlay" onclick="closeModalBg(event, 'modal-zukan')">
+  <div class="panel modal">
+    <div class="modal-title">🦖 もどき図鑑</div>
+    <div class="modal-content">
+      <div class="zukan-grid" id="zukan-grid"></div>
+      <div class="zukan-detail" id="zukan-detail"></div>
+    </div>
+    <div class="modal-actions"><button class="btn" style="background:#eee;" onclick="closeModal('modal-zukan')">戻る</button></div>
+  </div>
+</div>
+
+<!-- ショップ/模様替えモーダル -->
+<div id="modal-shop" class="modal-overlay" onclick="closeModalBg(event, 'modal-shop')">
+  <div class="panel modal">
+    <div class="modal-title">🛋️ 模様替え＆ショップ</div>
+    <div style="font-size:12px; color:#666; text-align:center; margin-bottom:8px;">家具を買って部屋をポンコツに飾るぞい</div>
+    <div class="modal-content" id="shop-list"></div>
+    <div class="modal-actions"><button class="btn" style="background:#eee;" onclick="closeModal('modal-shop')">戻る</button></div>
+  </div>
+</div>
+
+<!-- 設定モーダル -->
+<div id="modal-config" class="modal-overlay" onclick="closeModalBg(event, 'modal-config')">
+  <div class="panel modal">
+    <div class="modal-title">⚙️ 設定</div>
+    <div class="modal-content">
+      <div class="switch-row">
+        <span>🔊 効果音(SE)</span>
+        <label class="switch">
+          <input type="checkbox" id="config-sound" onchange="toggleSound(this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-weight:bold; margin-bottom:4px;">✏️ 名前変更</div>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="config-name-input" style="margin:0; font-size:16px; padding:8px;" placeholder="新しい名前">
+          <button class="btn" style="padding:4px 12px; font-size:14px; flex:0 0 70px;" onclick="changeCharaName()">変更</button>
+        </div>
+      </div>
+      <div style="border-top:2px dashed #ccc; padding-top:12px; text-align:center;">
+        <button class="btn" style="background:#ff6b6b; color:#fff; font-size:14px; padding:8px;" onclick="if(confirm('本当に最初からやり直す（転生する）かのう？ 全ての家具や図鑑データも消えてしまうぞい！')) resetGame()">💀 転生する(データリセット)</button>
+      </div>
+    </div>
+    <div class="modal-actions"><button class="btn" style="background:#eee;" onclick="closeModal('modal-config')">戻る</button></div>
+  </div>
+</div>
+
+<!-- ハプニングモーダル -->
+<div id="modal-happen" class="modal-overlay">
+  <div class="panel modal" style="align-self:center; border-radius:12px; max-width:380px;">
+    <div class="modal-title" style="color:#d35400;" id="happen-title">🎲 突発ハプニング！</div>
+    <div class="modal-content">
+      <div class="happen-body" id="happen-desc"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ex" onclick="closeModal('modal-happen')">了解じゃ！</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new AudioContext();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playSound(type) {
+  if(state && !state.soundEnabled) return;
+  if(!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  
+  const now = audioCtx.currentTime;
+  if(type === 'click') {
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+    osc.start(now); osc.stop(now + 0.05);
+  } else if(type === 'coin') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(987.77, now); 
+    osc.frequency.setValueAtTime(1318.51, now + 0.08); 
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.linearRampToValueAtTime(0, now + 0.4);
+    osc.start(now); osc.stop(now + 0.4);
+  } else if(type === 'damage') {
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(50, now + 0.2);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.linearRampToValueAtTime(0, now + 0.2);
+    osc.start(now); osc.stop(now + 0.2);
+  } else if(type === 'fanfare') {
+    osc.type = 'square';
+    [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => { 
+      setTimeout(() => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.connect(g); g.connect(audioCtx.destination);
+        o.type = 'square'; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
+        o.start(); o.stop(audioCtx.currentTime + 0.2);
+      }, i * 150);
+    });
+  }
+}
+
+document.addEventListener('click', () => initAudio(), {once: true});
+
+const INITIAL_BALANCE = 3000;
+const DAILY_GRANT = 2500;
+const INACTIVE_PENALTY = 100;
+const FOOD_MIN_YEN = 300;
+const EX_MAX_MINS = 240;
+const STARVATION_WARNING_HOURS = 24; 
+const STARVATION_DEATH_HOURS = 48;   
+
+const CHARA_TYPES = [
+  {id: 0, name: 'スライムもどき', hue: 0},
+  {id: 1, name: 'ベスもどき', hue: 320}, 
+  {id: 2, name: 'ポイズンもどき', hue: 280}, 
+  {id: 3, name: 'レモンもどき', hue: 60}, 
+  {id: 4, name: 'アクアもどき', hue: 200}, 
+  {id: 5, name: 'ダークもどき', hue: 180, invert: true}, 
+  {id: 6, name: 'メタルもどき', hue: 0, gray: true}, 
+  {id: 7, name: 'ピーチもどき', hue: 300}, 
+  {id: 8, name: 'エメラルドもどき', hue: 120}, 
+  {id: 9, name: 'ゴールドもどき', hue: 45, contrast: 2} 
+];
+
+const CHARA_DETAILS = [
+  { id: 0, desc: '最初に選ばれる、ごく平凡なもどき。ポンコツライフの相棒じゃ。' },
+  { id: 1, desc: 'ほんのりピンク色のもどき。甘いものが好きで、よくつまみ食いをするぞい。' },
+  { id: 2, desc: '危険なオーラを放つもどき。餓死寸前の過酷な環境を生き抜くと変化するぞ。' },
+  { id: 3, desc: '酸っぱいレモンのようなもどき。まったりとした健康的な生活を好むのう。' },
+  { id: 4, desc: '澄んだ水のようなもどき。冷静沈着で、無駄遣いを嫌うぞい。' },
+  { id: 5, desc: '闇の力を秘めたもどき。赤字や借金を重ねると、この姿に染まってしまうのじゃ。' },
+  { id: 6, desc: '全身が金属でできたもどき。激しい筋トレや運動をこなすと進化するぞい。' },
+  { id: 7, desc: 'フルーティーで愛らしいもどき。美味しい食事と適度な運動のバランスが良いのう。' },
+  { id: 8, desc: '宝石のように輝くもどき。毎日コツコツと運動を続けると、この姿になるぞい。' },
+  { id: 9, desc: '黄金に輝く伝説のもどき。莫大なお金と高いステータスを持つ者のみが拝めるのじゃ。' }
+];
+
+const SHOP_ITEMS = [
+  { id: 'dumbbell', name: 'ダンベル', slot: 'floorLeft', price: 1500, emoji: '🏋️', desc: '運動での獲得金が +10%アップじゃ！', effect: 'ex_bonus' },
+  { id: 'futon', name: 'ボロい布団', slot: 'floorRight', price: 1000, emoji: '🛌', desc: '餓死猶予が +4時間 延びるぞい！', effect: 'starve_bonus' },
+  { id: 'tv', name: '豪華なテレビ', slot: 'floorRight', price: 8000, emoji: '📺', desc: 'ログインボーナスが +200円 増加するぞい！', effect: 'login_bonus' },
+  { id: 'shoji', name: '破れた障子', slot: 'wallLeft', price: 500, emoji: '🚪', desc: 'ポンコツな障子じゃ。特に効果はないぞい。', effect: 'none' },
+  { id: 'tsubo', name: '謎の壺', slot: 'floorLeft', price: 5000, emoji: '🏺', desc: 'ハプニングで良いイベントが起きやすくなるぞい！', effect: 'happen_bonus' },
+  { id: 'calendar', name: 'カレンダー', slot: 'wallRight', price: 800, emoji: '📅', desc: '連続運動ボーナスが 1.3倍に強化されるぞい！', effect: 'streak_bonus' }
+];
+
+const STAGES = [
+  { level:0,  name:'失踪',           min:-Infinity, max:-Infinity },
+  { level:1,  name:'引っ越しの準備', min:-Infinity, max:-Infinity },
+  { level:2,  name:'ホームレスの生活',min:-Infinity, max:-Infinity },
+  { level:3,  name:'差し押さえの生活',min:-Infinity, max:-Infinity },
+  { level:4,  name:'火の車な生活',   min:-Infinity, max:-Infinity },
+  { level:5,  name:'苦しい生活',     min:-Infinity, max:-Infinity },
+  { level:6,  name:'カツカツの生活', min:0,     max:3500 },
+  { level:7,  name:'普通の生活',     min:3500,  max:5000 },
+  { level:8,  name:'余裕のある生活', min:5000,  max:7000 },
+  { level:9,  name:'裕福な生活',     min:7000,  max:10000 },
+  { level:10, name:'大富豪',         min:10000, max:Infinity },
+];
+
+const EXERCISE_DB = [
+  { id:1, name:'ウォーキング[ゆっくり]', category:'有酸素', rate:2.5, desc:'平地' },
+  { id:2, name:'ウォーキング[普通]', category:'有酸素', rate:3.3, desc:'平地' },
+  { id:3, name:'ウォーキング[速歩き]', category:'有酸素', rate:4.3, desc:'運動目的' },
+  { id:4, name:'ウォーキング[かなり速い]', category:'有酸素', rate:5.0, desc:'大股' },
+  { id:5, name:'階段のぼり[ゆっくり]', category:'有酸素', rate:4.0, desc:'日常利用' },
+  { id:6, name:'階段のぼり[速い]', category:'有酸素', rate:8.8, desc:'連続昇降' },
+  { id:7, name:'階段おり', category:'有酸素', rate:3.5, desc:'連続降下' },
+  { id:8, name:'ハイキング[平地]', category:'有酸素', rate:5.3, desc:'軽登山' },
+  { id:9, name:'ハイキング[山道]', category:'有酸素', rate:6.0, desc:'傾斜あり' },
+  { id:10, name:'トレッドミル歩行[ゆっくり]', category:'有酸素', rate:2.8, desc:'屋内' },
+  { id:11, name:'トレッドミル歩行[速歩]', category:'有酸素', rate:4.5, desc:'屋内' },
+  { id:12, name:'ジョギング[ゆっくり]', category:'有酸素', rate:7.0, desc:'会話可能域' },
+  { id:13, name:'ランニング[8km/h]', category:'有酸素', rate:8.3, desc:'軽い走り' },
+  { id:14, name:'ランニング[10km/h]', category:'有酸素', rate:9.8, desc:'一般的' },
+  { id:15, name:'ランニング[12km/h]', category:'有酸素', rate:11.0, desc:'やや速い' },
+  { id:16, name:'ランニング[坂道]', category:'有酸素', rate:11.5, desc:'傾斜あり' },
+  { id:17, name:'インターバル走', category:'有酸素', rate:10.0, desc:'高低反復' },
+  { id:18, name:'エアロバイク[軽め]', category:'有酸素', rate:3.5, desc:'負荷低' },
+  { id:19, name:'エアロバイク[中強度]', category:'有酸素', rate:6.8, desc:'負荷中' },
+  { id:20, name:'エアロバイク[高強度]', category:'有酸素', rate:10.0, desc:'負荷高' },
+  { id:21, name:'自転車移動[ゆっくり]', category:'有酸素', rate:4.0, desc:'平地' },
+  { id:22, name:'自転車移動[普通]', category:'有酸素', rate:6.8, desc:'通勤向け' },
+  { id:23, name:'自転車移動[速い]', category:'有酸素', rate:8.0, desc:'巡航速め' },
+  { id:24, name:'ロードバイク[高強度]', category:'有酸素', rate:10.0, desc:'スポーツ走行' },
+  { id:25, name:'スイミング[ゆっくり]', category:'有酸素', rate:6.0, desc:'休み休み' },
+  { id:26, name:'スイミング[中強度]', category:'有酸素', rate:8.0, desc:'連続泳' },
+  { id:27, name:'スイミング[速い]', category:'有酸素', rate:10.0, desc:'高負荷' },
+  { id:28, name:'水中ウォーキング', category:'有酸素', rate:4.5, desc:'膝に優しい' },
+  { id:29, name:'アクアビクス', category:'有酸素', rate:5.5, desc:'集団運動' },
+  { id:30, name:'エアロビクス[ローインパクト]', category:'有酸素', rate:5.0, desc:'跳躍少なめ' },
+  { id:31, name:'エアロビクス[ハイインパクト]', category:'有酸素', rate:7.3, desc:'跳躍あり' },
+  { id:32, name:'ダンスフィットネス[軽め]', category:'有酸素', rate:4.5, desc:'楽しく継続' },
+  { id:33, name:'ダンスフィットネス[激しめ]', category:'有酸素', rate:7.0, desc:'発汗多め' },
+  { id:34, name:'縄跳び[ゆっくり]', category:'有酸素', rate:8.8, desc:'短時間高負荷' },
+  { id:35, name:'縄跳び[速い]', category:'有酸素', rate:12.3, desc:'上級向け' },
+  { id:36, name:'ローイングマシン[軽め]', category:'有酸素', rate:4.8, desc:'フォーム重視' },
+  { id:37, name:'ローイングマシン[中強度]', category:'有酸素', rate:7.0, desc:'持続系' },
+  { id:38, name:'ローイングマシン[高強度]', category:'有酸素', rate:8.5, desc:'追い込み' },
+  { id:39, name:'クロストレーナー[中強度]', category:'有酸素', rate:5.0, desc:'全身運動' },
+  { id:40, name:'クロストレーナー[高強度]', category:'有酸素', rate:7.0, desc:'心拍上昇' },
+  { id:41, name:'自重スクワット[軽め]', category:'筋力', rate:3.5, desc:'休憩多め' },
+  { id:42, name:'自重スクワット[高強度]', category:'筋力', rate:5.0, desc:'連続反復' },
+  { id:43, name:'ランジ[軽め]', category:'筋力', rate:3.8, desc:'フォーム練習' },
+  { id:44, name:'ランジ[高強度]', category:'筋力', rate:5.5, desc:'連続反復' },
+  { id:45, name:'腕立て伏せ[軽め]', category:'筋力', rate:3.8, desc:'休憩多め' },
+  { id:46, name:'腕立て伏せ[高強度]', category:'筋力', rate:8.0, desc:'連続反復' },
+  { id:47, name:'懸垂[軽め]', category:'筋力', rate:4.0, desc:'補助あり含む' },
+  { id:48, name:'懸垂[高強度]', category:'筋力', rate:8.0, desc:'追い込み' },
+  { id:49, name:'腹筋運動[軽め]', category:'筋力', rate:3.8, desc:'床種目' },
+  { id:50, name:'腹筋運動[高強度]', category:'筋力', rate:6.0, desc:'休憩少なめ' },
+  { id:51, name:'プランク・体幹[軽め]', category:'筋力', rate:3.0, desc:'静的保持' },
+  { id:52, name:'プランク・体幹[高強度]', category:'筋力', rate:4.5, desc:'変化付き' },
+  { id:53, name:'ヒップリフト', category:'筋力', rate:3.0, desc:'臀部中心' },
+  { id:54, name:'ステップアップ[軽め]', category:'筋力', rate:4.0, desc:'台利用' },
+  { id:55, name:'ステップアップ[高強度]', category:'筋力', rate:8.0, desc:'連続反復' },
+  { id:56, name:'レジスタンスバンド[上半身]', category:'筋力', rate:3.5, desc:'負荷軽中' },
+  { id:57, name:'レジスタンスバンド[下半身]', category:'筋力', rate:4.0, desc:'負荷軽中' },
+  { id:58, name:'ケトルベル[軽め]', category:'筋力', rate:5.0, desc:'フォーム重視' },
+  { id:59, name:'ケトルベル[高強度]', category:'筋力', rate:8.0, desc:'スイング多め' },
+  { id:60, name:'ダンベル[軽め]', category:'筋力', rate:3.5, desc:'軽重量' },
+  { id:61, name:'ダンベル[中強度]', category:'筋力', rate:5.0, desc:'一般的' },
+  { id:62, name:'ダンベル[高強度]', category:'筋力', rate:6.5, desc:'高重量' },
+  { id:63, name:'バーベル[軽め]', category:'筋力', rate:3.5, desc:'軽重量' },
+  { id:64, name:'バーベル[中強度]', category:'筋力', rate:5.0, desc:'一般的' },
+  { id:65, name:'バーベル[高強度]', category:'筋力', rate:6.0, desc:'高重量' },
+  { id:66, name:'マシン筋トレ[上半身]', category:'筋力', rate:3.5, desc:'ジム' },
+  { id:67, name:'マシン筋トレ[下半身]', category:'筋力', rate:4.5, desc:'ジム' },
+  { id:68, name:'サーキットトレーニング[軽め]', category:'筋力', rate:6.0, desc:'全身' },
+  { id:69, name:'サーキットトレーニング[高強度]', category:'筋力', rate:8.0, desc:'休憩少' },
+  { id:70, name:'クロスフィット系WOD[中強度]', category:'筋力', rate:8.0, desc:'複合運動' },
+  { id:71, name:'クロスフィット系WOD[高強度]', category:'筋力', rate:10.0, desc:'競技寄り' },
+  { id:72, name:'TRX・サスペンション[軽め]', category:'筋力', rate:4.0, desc:'自体重' },
+  { id:73, name:'TRX・サスペンション[高強度]', category:'筋力', rate:7.0, desc:'全身' },
+  { id:74, name:'ピラティス[マット]', category:'筋力', rate:3.0, desc:'体幹中心' },
+  { id:75, name:'ピラティス[マシン]', category:'筋力', rate:3.5, desc:'負荷調整可' },
+  { id:76, name:'ヨガ[ハタ]', category:'筋力', rate:2.5, desc:'静的中心' },
+  { id:77, name:'ヨガ[パワー]', category:'筋力', rate:4.0, desc:'流れ速め' },
+  { id:78, name:'ホットヨガ', category:'筋力', rate:3.0, desc:'発汗多め' },
+  { id:79, name:'ボクササイズ[筋持久系]', category:'筋力', rate:6.0, desc:'全身持久' },
+  { id:80, name:'メディシンボールトレーニング', category:'筋力', rate:6.0, desc:'投動作含む' },
+  { id:81, name:'サッカー[軽い練習]', category:'スポーツ', rate:5.0, desc:'ドリル中心' },
+  { id:82, name:'サッカー[試合]', category:'スポーツ', rate:7.0, desc:'実戦' },
+  { id:83, name:'フットサル[軽め]', category:'スポーツ', rate:6.0, desc:'小コート' },
+  { id:84, name:'フットサル[試合]', category:'スポーツ', rate:8.0, desc:'展開速い' },
+  { id:85, name:'バスケットボール[シュート練習]', category:'スポーツ', rate:4.5, desc:'軽練習' },
+  { id:86, name:'バスケットボール[試合]', category:'スポーツ', rate:8.0, desc:'実戦' },
+  { id:87, name:'バレーボール[一般]', category:'スポーツ', rate:3.0, desc:'レク中心' },
+  { id:88, name:'バレーボール[ビーチ]', category:'スポーツ', rate:8.0, desc:'砂地' },
+  { id:89, name:'野球[キャッチボール]', category:'スポーツ', rate:4.0, desc:'軽運動' },
+  { id:90, name:'野球[試合]', category:'スポーツ', rate:5.0, desc:'一般' },
+  { id:91, name:'ソフトボール[試合]', category:'スポーツ', rate:5.0, desc:'一般' },
+  { id:92, name:'テニス[ダブルス]', category:'スポーツ', rate:5.0, desc:'一般' },
+  { id:93, name:'テニス[シングルス]', category:'スポーツ', rate:8.0, desc:'走行多い' },
+  { id:94, name:'バドミントン[レクリエーション]', category:'スポーツ', rate:4.5, desc:'軽め' },
+  { id:95, name:'バドミントン[試合]', category:'スポーツ', rate:7.0, desc:'実戦' },
+  { id:96, name:'卓球[軽め]', category:'スポーツ', rate:4.0, desc:'ラリー中心' },
+  { id:97, name:'卓球[試合]', category:'スポーツ', rate:7.0, desc:'実戦' },
+  { id:98, name:'ゴルフ[カート使用]', category:'スポーツ', rate:3.5, desc:'打球中心' },
+  { id:99, name:'ゴルフ[歩行]', category:'スポーツ', rate:4.8, desc:'18ホール想定' },
+  { id:100, name:'ゴルフ[打ちっぱなし]', category:'スポーツ', rate:3.0, desc:'練習場' },
+  { id:101, name:'ボウリング', category:'スポーツ', rate:3.0, desc:'レジャー寄り' },
+  { id:102, name:'アーチェリー', category:'スポーツ', rate:2.5, desc:'立位中心' },
+  { id:103, name:'ボルダリング[室内]', category:'スポーツ', rate:8.0, desc:'課題登攀' },
+  { id:104, name:'ロッククライミング[一般]', category:'スポーツ', rate:7.5, desc:'ロープあり' },
+  { id:105, name:'スケートボード[移動・流し]', category:'スポーツ', rate:5.0, desc:'巡航' },
+  { id:106, name:'スケートボード[トリック練習]', category:'スポーツ', rate:6.0, desc:'反復練習' },
+  { id:107, name:'インラインスケート[ゆっくり]', category:'スポーツ', rate:7.0, desc:'巡航' },
+  { id:108, name:'インラインスケート[速い]', category:'スポーツ', rate:9.8, desc:'高負荷' },
+  { id:109, name:'アイススケート[一般]', category:'スポーツ', rate:7.0, desc:'リンク' },
+  { id:110, name:'アイスホッケー[試合]', category:'スポーツ', rate:8.0, desc:'実戦' },
+  { id:111, name:'スキー[滑降・一般]', category:'スポーツ', rate:7.0, desc:'ゲレンデ' },
+  { id:112, name:'スキー[クロスカントリー]', category:'スポーツ', rate:9.0, desc:'持久系' },
+  { id:113, name:'スノーボード[一般]', category:'スポーツ', rate:5.3, desc:'ゲレンデ' },
+  { id:114, name:'雪遊び・そり遊び', category:'スポーツ', rate:5.3, desc:'冬レジャー' },
+  { id:115, name:'サーフィン[待機多め]', category:'スポーツ', rate:3.0, desc:'波待ち含む' },
+  { id:116, name:'サーフィン[アクティブ]', category:'スポーツ', rate:5.0, desc:'漕ぎ多め' },
+  { id:117, name:'SUP[平水]', category:'スポーツ', rate:6.0, desc:'立位漕行' },
+  { id:118, name:'カヌー・カヤック[軽め]', category:'スポーツ', rate:3.5, desc:'穏やか' },
+  { id:119, name:'カヌー・カヤック[速い]', category:'スポーツ', rate:7.0, desc:'連続漕行' },
+  { id:120, name:'ボート漕ぎ[レジャー]', category:'スポーツ', rate:4.0, desc:'穏やか' },
+  { id:121, name:'ボート漕ぎ[競技]', category:'スポーツ', rate:12.0, desc:'高負荷' },
+  { id:122, name:'ラグビー[一般]', category:'スポーツ', rate:8.3, desc:'接触あり' },
+  { id:123, name:'アメリカンフットボール[一般]', category:'スポーツ', rate:8.0, desc:'練習試合含む' },
+  { id:124, name:'ハンドボール[試合]', category:'スポーツ', rate:8.0, desc:'実戦' },
+  { id:125, name:'ホッケー[フィールド]', category:'スポーツ', rate:8.0, desc:'実戦' },
+  { id:126, name:'ラクロス[試合]', category:'スポーツ', rate:8.0, desc:'実戦' },
+  { id:127, name:'柔道[練習]', category:'スポーツ', rate:10.3, desc:'乱取り含む' },
+  { id:128, name:'空手[形・基本]', category:'スポーツ', rate:5.5, desc:'技練習' },
+  { id:129, name:'空手[組手]', category:'スポーツ', rate:10.3, desc:'実戦寄り' },
+  { id:130, name:'剣道[稽古]', category:'スポーツ', rate:6.0, desc:'打ち込み' },
+  { id:131, name:'ボクシング[サンドバッグ]', category:'スポーツ', rate:5.5, desc:'練習' },
+  { id:132, name:'ボクシング[スパーリング]', category:'スポーツ', rate:7.8, desc:'実戦寄り' },
+  { id:133, name:'レスリング[練習]', category:'スポーツ', rate:7.0, desc:'組み合い' },
+  { id:134, name:'フェンシング', category:'スポーツ', rate:6.0, desc:'フットワーク多め' },
+  { id:135, name:'ダイビング[スキューバ]', category:'スポーツ', rate:7.0, desc:'装備込み' },
+  { id:136, name:'シュノーケリング', category:'スポーツ', rate:5.0, desc:'水面中心' },
+  { id:137, name:'乗馬[歩様中心]', category:'スポーツ', rate:3.8, desc:'軽め' },
+  { id:138, name:'乗馬[駈歩含む]', category:'スポーツ', rate:5.5, desc:'中強度' },
+  { id:139, name:'フリスビー[軽め]', category:'スポーツ', rate:3.0, desc:'投げ合い' },
+  { id:140, name:'アルティメット[試合]', category:'スポーツ', rate:8.0, desc:'走行多い' },
+  { id:141, name:'掃除機がけ', category:'日常活動', rate:3.3, desc:'室内清掃' },
+  { id:142, name:'床のモップがけ', category:'日常活動', rate:3.5, desc:'室内清掃' },
+  { id:143, name:'ほうきで掃く', category:'日常活動', rate:3.3, desc:'室内外' },
+  { id:144, name:'床磨き[しっかり]', category:'日常活動', rate:4.5, desc:'力作業' },
+  { id:145, name:'窓拭き', category:'日常活動', rate:3.2, desc:'上肢使用' },
+  { id:146, name:'浴室掃除', category:'日常活動', rate:3.5, desc:'しゃがみ動作' },
+  { id:147, name:'トイレ掃除', category:'日常活動', rate:3.5, desc:'かがみ動作' },
+  { id:148, name:'キッチン掃除', category:'日常活動', rate:2.5, desc:'片付け含む' },
+  { id:149, name:'皿洗い', category:'日常活動', rate:2.3, desc:'立位' },
+  { id:150, name:'洗濯[干す・たたむ]', category:'日常活動', rate:2.3, desc:'家事' },
+  { id:151, name:'布団の上げ下ろし', category:'日常活動', rate:4.0, desc:'持ち上げあり' },
+  { id:152, name:'ベッドメイキング', category:'日常活動', rate:3.3, desc:'シーツ交換含む' },
+  { id:153, name:'片付け・整理整頓', category:'日常活動', rate:2.5, desc:'室内' },
+  { id:154, name:'模様替え[軽い家具移動]', category:'日常活動', rate:4.0, desc:'小家具' },
+  { id:155, name:'家具移動[重い]', category:'日常活動', rate:6.0, desc:'大物' },
+  { id:156, name:'料理[立位中心]', category:'日常活動', rate:2.5, desc:'調理' },
+  { id:157, name:'パン・菓子づくり', category:'日常活動', rate:2.8, desc:'調理' },
+  { id:158, name:'買い物[食料品を持たず]', category:'日常活動', rate:2.3, desc:'店内移動' },
+  { id:159, name:'買い物[かご・袋を持つ]', category:'日常活動', rate:3.0, desc:'荷物あり' },
+  { id:160, name:'ショッピングモール歩き', category:'日常活動', rate:2.8, desc:'長め移動' },
+  { id:161, name:'ウィンドウショッピング[長め]', category:'日常活動', rate:2.5, desc:'立ち止まり多め' },
+  { id:162, name:'子どもの送り迎え徒歩', category:'日常活動', rate:3.0, desc:'平地' },
+  { id:163, name:'ベビーカーを押して歩く', category:'日常活動', rate:3.5, desc:'平地' },
+  { id:164, name:'子どもと外遊び[軽め]', category:'日常活動', rate:3.5, desc:'公園遊び' },
+  { id:165, name:'子どもと外遊び[活発]', category:'日常活動', rate:5.0, desc:'走る遊び' },
+  { id:166, name:'犬の散歩[ゆっくり]', category:'日常活動', rate:3.0, desc:'平地' },
+  { id:167, name:'犬の散歩[速歩き]', category:'日常活動', rate:4.0, desc:'運動目的' },
+  { id:168, name:'ペットの世話', category:'日常活動', rate:2.8, desc:'掃除含む' },
+  { id:169, name:'通勤徒歩[普通]', category:'日常活動', rate:3.3, desc:'平地' },
+  { id:170, name:'通勤徒歩[速歩き]', category:'日常活動', rate:4.3, desc:'急ぎ足' },
+  { id:171, name:'自転車通勤[ゆっくり]', category:'日常活動', rate:4.0, desc:'平地' },
+  { id:172, name:'自転車通勤[普通]', category:'日常活動', rate:6.8, desc:'一般的' },
+  { id:173, name:'立ち仕事[軽作業]', category:'日常活動', rate:2.0, desc:'販売接客等' },
+  { id:174, name:'立ち仕事[歩行多め]', category:'日常活動', rate:3.0, desc:'移動多め' },
+  { id:175, name:'デスクワーク', category:'日常活動', rate:1.5, desc:'座位' },
+  { id:176, name:'会議・立ち話[立位]', category:'日常活動', rate:1.8, desc:'立位中心' },
+  { id:177, name:'階段利用[日常ペース]', category:'日常活動', rate:4.0, desc:'短時間反復' },
+  { id:178, name:'荷物運搬[軽い荷物]', category:'日常活動', rate:3.5, desc:'手荷物' },
+  { id:179, name:'荷物運搬[重い荷物]', category:'日常活動', rate:6.0, desc:'引っ越し等' },
+  { id:180, name:'雪かき', category:'日常活動', rate:6.0, desc:'冬季作業' },
+  { id:181, name:'散歩[のんびり]', category:'レジャー', rate:2.5, desc:'景色目的' },
+  { id:182, name:'写真撮影しながら歩く', category:'レジャー', rate:2.5, desc:'停止多め' },
+  { id:183, name:'釣り[岸釣り]', category:'レジャー', rate:3.0, desc:'立位中心' },
+  { id:184, name:'釣り[川歩きあり]', category:'レジャー', rate:4.0, desc:'移動あり' },
+  { id:185, name:'バードウォッチング', category:'レジャー', rate:2.5, desc:'歩行少なめ' },
+  { id:186, name:'キャンプ設営', category:'レジャー', rate:4.0, desc:'テント設営' },
+  { id:187, name:'キャンプ片付け', category:'レジャー', rate:4.5, desc:'運搬あり' },
+  { id:188, name:'ピクニック準備・片付け', category:'レジャー', rate:3.0, desc:'荷運び軽め' },
+  { id:189, name:'家庭菜園[水やり]', category:'レジャー', rate:2.5, desc:'軽作業' },
+  { id:190, name:'家庭菜園[草取り]', category:'レジャー', rate:3.5, desc:'しゃがみ動作' },
+  { id:191, name:'家庭菜園[土づくり・耕す]', category:'レジャー', rate:5.0, desc:'力作業' },
+  { id:192, name:'DIY[軽作業]', category:'レジャー', rate:2.5, desc:'組立中心' },
+  { id:193, name:'DIY[電動工具使用]', category:'レジャー', rate:3.0, desc:'立位作業' },
+  { id:194, name:'DIY[重作業]', category:'レジャー', rate:5.0, desc:'切断運搬含む' },
+  { id:195, name:'楽器演奏[座位・軽め]', category:'レジャー', rate:2.0, desc:'ギター等' },
+  { id:196, name:'ドラム演奏', category:'レジャー', rate:4.0, desc:'全身使用' },
+  { id:197, name:'カラオケ[立って歌う]', category:'レジャー', rate:2.0, desc:'軽い動き' },
+  { id:198, name:'テーマパーク散策', category:'レジャー', rate:3.5, desc:'歩行多め' },
+  { id:199, name:'旅行中の街歩き[普通]', category:'レジャー', rate:3.3, desc:'観光' },
+  { id:200, name:'旅行中の街歩き[長時間・速め]', category:'レジャー', rate:4.3, desc:'観光' }
+];
+
+let state = loadState();
+function defaultState() {
+  const newCharaId = Math.floor(Math.random() * 10);
+  return {
+    charaId: newCharaId,
+    balance: INITIAL_BALANCE,
+    stage: 6,
+    deficitDays: 0,
+    lastDate: today(),
+    lastMealTime: Date.now(),
+    logs: [],
+    todayExercised: false,
+    todayExerciseMins: 0,
+    recentExercises: [], 
+    version: 9,
+    stageFoodTotal: 0,
+    stageExTotal: 0,
+    stageDays: 0,
+    patternName: '判定中...',
+    loginStreak: 0,
+    mails: [],
+    quests: [],
+    diaries: [],
+    ownedItems: [],
+    placedItems: { wallLeft: null, wallRight: null, floorLeft: null, floorRight: null },
+    unlockedCharas: [newCharaId],
+    soundEnabled: true
+  };
+}
+function loadState() {
+  try {
+    let s = JSON.parse(localStorage.getItem('mncState9') || 'null');
+    if (!s) {
+      const old = JSON.parse(localStorage.getItem('mncState8') || 'null');
+      if (old) {
+        s = {
+          ...defaultState(),
+          ...old,
+          version: 9
+        };
+        if (!s.unlockedCharas.includes(s.charaId)) {
+          s.unlockedCharas.push(s.charaId);
+        }
+      }
+    }
+    return (s && s.version === 9) ? s : defaultState();
+  } catch { return defaultState(); }
+}
+function saveState() { localStorage.setItem('mncState9', JSON.stringify(state)); }
+
+function today() { const d = new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
+
+async function processCharacterImage() {
+  const cType = CHARA_TYPES[state.charaId || 0];
+  document.getElementById('ui-chara-name').innerText = cType.name;
+  const targetImg = document.getElementById('chara-img');
+
+  let filterStr = `hue-rotate(${cType.hue}deg)`;
+  if(cType.invert) filterStr += ' invert(100%)';
+  if(cType.gray) filterStr += ' grayscale(100%)';
+  if(cType.contrast) filterStr += ` contrast(${cType.contrast})`;
+
+  try {
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.src = "chara_pop.png"; 
+    
+    await new Promise((resolve, reject) => { 
+      img.onload = resolve; 
+      img.onerror = () => reject(new Error('CORS Error')); 
+    });
+    if(img.width === 0) throw new Error('Empty Image');
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width; canvas.height = img.height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    
+    ctx.filter = filterStr;
+    ctx.drawImage(img, 0, 0);
+    
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] > 240 && data[i+1] > 240 && data[i+2] > 240) data[i+3] = 0;
+    }
+    ctx.putImageData(imgData, 0, 0);
+    targetImg.src = canvas.toDataURL();
+
+  } catch (e) {
+    targetImg.style.filter = filterStr + ' drop-shadow(2px 4px 0px rgba(0,0,0,0.4))';
+    targetImg.style.mixBlendMode = 'multiply';
+    targetImg.src = "chara_pop.png";
+  }
+}
+
+function getWeekStart() {
+  const d = new Date();
+  const day = d.getDay() || 7; 
+  if (day !== 1) d.setHours(-24 * (day - 1));
+  return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+}
+
+function generateDailyQuests() {
+  const ex = EXERCISE_DB[Math.floor(Math.random() * EXERCISE_DB.length)];
+  const pool = [
+    { id: 'd_ex_any', type: 'ex_count', title: '運動を1回記録する', target: 1, reward: 100 },
+    { id: 'd_ex_15', type: 'ex_mins', title: '合計15分運動する', target: 15, reward: 150 },
+    { id: 'd_food_1', type: 'food_count', title: '食事を1回記録する', target: 1, reward: 50 },
+    { id: `d_ex_spec_${ex.id}`, type: 'ex_spec', targetId: ex.id, title: `【指定】${ex.name}を5分する`, target: 5, reward: 200 }
+  ];
+  const selected = pool.sort(() => 0.5 - Math.random()).slice(0, 3);
+  return selected.map(q => ({ ...q, period: 'daily', progress: 0, claimed: false }));
+}
+
+function generateWeeklyQuests() {
+  const pool = [
+    { id: 'w_ex_days', type: 'ex_days', title: '週に3日は運動する', target: 3, reward: 1000 },
+    { id: 'w_ex_90', type: 'ex_mins', title: '週合計で90分運動する', target: 90, reward: 1500 },
+    { id: 'w_food_5', type: 'food_count', title: '週に5回食事を記録する', target: 5, reward: 500 }
+  ];
+  return pool.map(q => ({ ...q, period: 'weekly', progress: 0, claimed: false }));
+}
+
+function checkQuests(type, val, extraId = null) {
+  if(!state.quests) return;
+  state.quests.forEach(q => {
+    if(q.claimed) return;
+    if(q.type === type) {
+      if(q.type === 'ex_spec') {
+        if(q.targetId === extraId) q.progress += val;
+      } else {
+        q.progress += val;
+      }
+      if(q.progress > q.target) q.progress = q.target;
+    }
+  });
+}
+
+let todayEventMsg = "";
+
+let pendingHappening = null;
+let pendingEvolution = null;
+
+function init() {
+  if(!state.mails) state.mails = [];
+  if(!state.quests) state.quests = [];
+  if(!state.diaries) state.diaries = [];
+  if(!state.ownedItems) state.ownedItems = [];
+  if(!state.placedItems) state.placedItems = { wallLeft: null, wallRight: null, floorLeft: null, floorRight: null };
+  if(!state.unlockedCharas) state.unlockedCharas = [state.charaId || 0];
+  if(state.soundEnabled === undefined) state.soundEnabled = true;
+  
+  processCharacterImage();
+  renderRoomItems();
+  checkDaily();
+  calcPattern();
+  render();
+  startWandering();
+  
+  if(pendingHappening) {
+    setTimeout(() => {
+      document.getElementById('happen-title').innerText = pendingHappening.title;
+      document.getElementById('happen-desc').innerText = pendingHappening.desc;
+      document.getElementById('modal-happen').classList.add('open');
+      pendingHappening = null;
+    }, 800);
+  }
+  
+  if(pendingEvolution !== null) {
+    setTimeout(() => {
+      const evoName = CHARA_TYPES[pendingEvolution].name;
+      playSound('fanfare');
+      showToast(`✨ キャラクターが【${evoName}】に進化したぞい！`);
+      pendingEvolution = null;
+    }, 2000);
+  }
+}
+
+function checkDaily() {
+  const t = today();
+  if (state.lastDate !== t) {
+    
+    // 1. 日記の自動生成 (前日の行動)
+    const diaryText = generateDiaryText();
+    state.diaries.unshift({ date: state.lastDate, text: diaryText });
+    if(state.diaries.length > 30) state.diaries.pop();
+    
+    // 2. 連続運動判定
+    let streakMultiplier = 1.2;
+    if (state.placedItems.wallRight === 'calendar') {
+      streakMultiplier = 1.3;
+    }
+    
+    if (state.todayExercised) {
+      state.loginStreak = (state.loginStreak || 0) + 1;
+    } else {
+      state.loginStreak = 0; 
+      state.balance -= INACTIVE_PENALTY;
+    }
+    
+    // 3. 進化判定
+    const evolvedId = checkEvolution();
+    if (evolvedId !== null) {
+      pendingEvolution = evolvedId;
+    }
+    
+    // 4. ハプニング判定 (30%の確率で発生)
+    let happenChance = 0.3;
+    if (state.placedItems.floorLeft === 'tsubo') {
+      happenChance = 0.45;
+    }
+    if (Math.random() < happenChance) {
+      const availableEvents = HAPPENING_EVENTS.filter(ev => !ev.condition || ev.condition(state));
+      if (availableEvents.length > 0) {
+        const ev = availableEvents[Math.floor(Math.random() * availableEvents.length)];
+        ev.effect(state);
+        pendingHappening = { title: ev.title, desc: ev.desc };
+      }
+    }
+    
+    // 5. ログインボーナス (豪華なテレビで +200円)
+    let grantVal = DAILY_GRANT;
+    if (state.placedItems.floorRight === 'tv') {
+      grantVal += 200;
+    }
+    state.mails.push({ id: Date.now(), title: "💰 本日の支給額", val: grantVal, date: t });
+    
+    // 6. 週間チェックとリセット
+    const currWeek = getWeekStart();
+    if (state.lastWeek !== currWeek) {
+      state.lastWeek = currWeek;
+      state.quests = (state.quests || []).filter(q => q.period !== 'weekly');
+      state.quests.push(...generateWeeklyQuests());
+    }
+    
+    // デイリーリセット
+    state.quests = (state.quests || []).filter(q => q.period !== 'daily');
+    state.quests.push(...generateDailyQuests());
+    
+    if (state.balance < 0) {
+      state.deficitDays++;
+      if (state.deficitDays >= 12) return triggerDeath('失踪（赤字12日）', true);
+    } else {
+      state.deficitDays = 0;
+    }
+    
+    state.todayExercised = false;
+    state.todayExerciseMins = 0;
+    state.logs = []; 
+    state.lastDate = t;
+    state.stageDays++; 
+    
+    updateStage();
+    calcPattern();
+    saveState();
+  }
+}
+
+function updateStage() {
+  const oldStage = state.stage;
+  if (state.balance < 0) {
+    if (state.deficitDays >= 10) state.stage = 1;
+    else if (state.deficitDays >= 8) state.stage = 2;
+    else if (state.deficitDays >= 6) state.stage = 3;
+    else if (state.deficitDays >= 4) state.stage = 4;
+    else if (state.deficitDays >= 2) state.stage = 5;
+    else state.stage = 6;
+  } else {
+    for (let i = 10; i >= 6; i--) {
+      if (state.balance >= STAGES[i].min) { state.stage = i; break; }
+    }
+  }
+  
+  if(oldStage !== state.stage && state.stage >= 6) {
+    state.stageFoodTotal = 0; state.stageExTotal = 0; state.stageDays = 1;
+    state.patternName = '判定中...';
+  }
+}
+
+function calcPattern() {
+  if (state.stage < 6 || state.stageDays < 1) return;
+  const avgFood = state.stageFoodTotal / state.stageDays;
+  const avgEx = state.stageExTotal / state.stageDays;
+  if (avgFood <= 800 && avgEx >= 30) state.patternName = '超健康・節約家';
+  else if (avgFood <= 800 && avgEx < 30) state.patternName = 'インドア節約家';
+  else if (avgFood > 800 && avgEx >= 30) state.patternName = 'アクティブ豪遊';
+  else state.patternName = 'インドア浪費家';
+}
+
+function render() {
+  document.getElementById('ui-balance').innerText = state.balance.toLocaleString() + '円';
+  document.getElementById('ui-streak').innerText = `🔥 連続運動: ${state.loginStreak || 0}日`;
+  const stageData = STAGES[state.stage] || STAGES[6];
+  document.getElementById('ui-stage-name').innerText = stageData.name;
+  
+  const view = document.getElementById('chara-view');
+  if (state.stage >= 9) view.style.backgroundImage = "url('bg_rich.png')";
+  else if (state.stage >= 7) view.style.backgroundImage = "url('bg_normal.png')";
+  else view.style.backgroundImage = "url('bg_pop.png')";
+
+  if (state.balance < 0) {
+    document.getElementById('ui-pattern-name').innerText = `☠️ 赤字 ${state.deficitDays}日目`;
+    document.getElementById('ui-exp-fill').style.width = '0%';
+    document.getElementById('ui-exp-label').innerText = '借金返済まで...';
+  } else {
+    document.getElementById('ui-pattern-name').innerText = `✨ ${state.patternName}`;
+    const nextStage = STAGES[state.stage + 1];
+    if (nextStage && nextStage.min !== Infinity) {
+      const min = stageData.min === -Infinity ? 0 : stageData.min;
+      const range = nextStage.min - min;
+      const progress = state.balance - min;
+      const percent = Math.min(100, Math.max(0, (progress / range) * 100));
+      document.getElementById('ui-exp-fill').style.width = percent + '%';
+      document.getElementById('ui-exp-label').innerText = `次まで ${nextStage.min - state.balance}円`;
+    } else {
+      document.getElementById('ui-exp-fill').style.width = '100%';
+      document.getElementById('ui-exp-label').innerText = 'MAX';
+    }
+  }
+
+  const logHtml = state.logs.map(l => `<div class="log-row"><span><small style="color:#888;margin-right:6px;font-size:12px;">${l.time||''}</small>${l.label}</span><span style="color:${l.val>0?'#27ae60':'#c0392b'}; font-weight:bold;">${l.val > 0 ? '+'+l.val : l.val}円</span></div>`).join('');
+  document.getElementById('log-list').innerHTML = logHtml || '<div style="text-align:center; padding-top:4px; color:#888;">まだ記録がないぞい</div>';
+  
+  // バッジ更新
+  const unreadMails = state.mails ? state.mails.length : 0;
+  const mailBadge = document.getElementById('badge-mail');
+  if(unreadMails > 0) { mailBadge.style.display = 'block'; mailBadge.innerText = unreadMails; }
+  else { mailBadge.style.display = 'none'; }
+  
+  const clearedQuests = state.quests ? state.quests.filter(q => q.progress >= q.target && !q.claimed).length : 0;
+  const questBadge = document.getElementById('badge-quest');
+  if(clearedQuests > 0) { questBadge.style.display = 'block'; questBadge.innerText = clearedQuests; }
+  else { questBadge.style.display = 'none'; }
+
+  checkDeath();
+}
+
+function checkDeath() {
+  if (!state.lastMealTime) return;
+  const elapsedHours = (Date.now() - state.lastMealTime) / (1000 * 3600);
+  
+  let maxHours = STARVATION_DEATH_HOURS;
+  let warnHours = STARVATION_WARNING_HOURS;
+  if (state.placedItems && state.placedItems.floorRight === 'futon') {
+    maxHours += 4;
+    warnHours += 4;
+  }
+  
+  if (elapsedHours >= maxHours) {
+    triggerDeath(`餓死（${maxHours}時間経過）`, true);
+  } else if (elapsedHours >= warnHours) {
+    triggerDeath('餓死寸前', false);
+    const remain = Math.max(0, Math.floor(maxHours - elapsedHours));
+    document.getElementById('death-timer').innerText = remain;
+  } else {
+    document.getElementById('death-overlay').style.display = 'none';
+  }
+}
+
+function triggerDeath(reason, isFinal) {
+  const overlay = document.getElementById('death-overlay');
+  overlay.style.display = 'flex';
+  
+  if (isFinal) {
+    playSound('damage');
+    document.getElementById('death-title').innerText = 'ゲームオーバー';
+    document.getElementById('death-desc').innerHTML = `${reason}により<br>キャラクターは息絶えた...`;
+    document.getElementById('btn-rescue').style.display = 'none';
+    document.getElementById('btn-restart').style.display = 'block';
+  } else {
+    document.getElementById('death-title').innerText = '⚠️ 餓死寸前 ⚠️';
+    document.getElementById('btn-rescue').style.display = 'block';
+    document.getElementById('btn-restart').style.display = 'none';
+  }
+}
+
+function resetGame() {
+  state = defaultState();
+  saveState();
+  location.reload();
+}
+
+function rescueFood() { openFood(); }
+
+// --- UI操作 ---
+function openFood() { 
+  initAudio(); playSound('click');
+  document.getElementById('input-food').value = '';
+  document.getElementById('modal-food').classList.add('open'); 
+}
+
+function openExercise() { 
+  initAudio(); playSound('click');
+  document.getElementById('input-ex').value = '';
+  document.getElementById('search-ex').value = '';
+  renderExerciseList('');
+  document.getElementById('modal-ex').classList.add('open'); 
+}
+
+function openMail() {
+  initAudio(); playSound('click');
+  renderMail();
+  document.getElementById('modal-mail').classList.add('open');
+}
+
+function renderMail() {
+  const list = document.getElementById('mail-list');
+  if(!state.mails || state.mails.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#888;padding:20px;">ポストは空っぽじゃ</div>';
+    return;
+  }
+  list.innerHTML = state.mails.map(m => `
+    <div class="list-item">
+      <div class="list-item-info">
+        <div class="list-item-title">${m.title}</div>
+        <div class="list-item-desc">${m.date}</div>
+      </div>
+      <button class="btn btn-food" style="padding:6px 12px; font-size:14px; flex:0 0 70px;" onclick="claimMail(${m.id})">受取<br>+${m.val}円</button>
+    </div>
+  `).join('');
+}
+
+function claimMail(id) {
+  const idx = state.mails.findIndex(m => m.id === id);
+  if(idx === -1) return;
+  const m = state.mails[idx];
+  state.mails.splice(idx, 1);
+  state.balance += m.val;
+  playSound('coin');
+  showToast(`+${m.val}円 受け取った！`);
+  updateStage();
+  saveState();
+  renderMail();
+  render();
+}
+
+function openQuest() {
+  initAudio(); playSound('click');
+  renderQuest();
+  document.getElementById('modal-quest').classList.add('open');
+}
+
+function renderQuest() {
+  const list = document.getElementById('quest-list');
+  if(!state.quests || state.quests.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#888;padding:20px;">クエストは無いぞい</div>';
+    return;
+  }
+  
+  const dailyQuests = state.quests.filter(q => q.period === 'daily');
+  const weeklyQuests = state.quests.filter(q => q.period === 'weekly');
+  
+  const createQuestHtml = (quests, title) => {
+    if(quests.length === 0) return '';
+    const items = quests.map(q => {
+      const isCleared = q.progress >= q.target;
+      const btnHtml = q.claimed 
+        ? `<button class="btn" style="padding:6px 12px; font-size:14px; background:#ccc; color:#666; flex:0 0 70px;" disabled>受取済</button>`
+        : isCleared 
+          ? `<button class="btn btn-ex" style="padding:6px 12px; font-size:14px; flex:0 0 70px;" onclick="claimQuest('${q.id}')">達成！<br>+${q.reward}円</button>`
+          : `<div style="font-size:14px; font-weight:bold; color:#666; width:70px; text-align:center;">${q.progress}/${q.target}</div>`;
+      return `
+        <div class="list-item" style="${q.claimed ? 'opacity:0.5;' : ''}">
+          <div class="list-item-info">
+            <div class="list-item-title">${q.title}</div>
+            <div class="list-item-desc">報酬: ${q.reward}円</div>
+          </div>
+          ${btnHtml}
+        </div>
+      `;
+    }).join('');
+    return `<div style="font-weight:bold; font-size:16px; margin: 12px 0 6px; border-bottom:2px solid #ccc;">${title}</div>${items}`;
+  };
+
+  list.innerHTML = createQuestHtml(dailyQuests, '⏳ デイリークエスト') + createQuestHtml(weeklyQuests, '🗓️ ウィークリークエスト');
+}
+
+function claimQuest(id) {
+  const q = state.quests.find(x => x.id === id);
+  if(!q || q.claimed || q.progress < q.target) return;
+  q.claimed = true;
+  state.balance += q.reward;
+  playSound('fanfare');
+  showToast(`クエスト報酬！ +${q.reward}円`);
+  updateStage();
+  saveState();
+  renderQuest();
+  render();
+}
+
+function closeModal(id) { playSound('click'); document.getElementById(id).classList.remove('open'); }
+function closeModalBg(e, id) { if(e.target.id === id) closeModal(id); }
+
+function renderExerciseList(query) {
+  const q = query.toLowerCase();
+  const recentDiv = document.getElementById('ex-recent-list');
+  if(q === '' && state.recentExercises.length > 0) {
+    const recentItems = state.recentExercises.map(id => EXERCISE_DB.find(e => e.id === id)).filter(Boolean);
+    recentDiv.innerHTML = `<div class="ex-category">⭐ 最近の履歴</div>` + recentItems.map(ex => 
+      `<div class="ex-item" id="ex-${ex.id}" onclick="selEx(${ex.id})">
+         <div style="display:flex; flex-direction:column;">
+           <span>${ex.name}</span>
+           <span style="font-size:10px; color:#888;">${ex.category}</span>
+         </div>
+         <span>${Math.floor(ex.rate * 10)}円/分</span>
+      </div>`
+    ).join('');
+  } else {
+    recentDiv.innerHTML = '';
+  }
+
+  const filtered = EXERCISE_DB.filter(ex => 
+    ex.name.toLowerCase().includes(q) || 
+    (ex.category && ex.category.includes(q)) ||
+    (ex.desc && ex.desc.includes(q))
+  );
+  document.getElementById('ex-list').innerHTML = `<div class="ex-category">🔍 検索結果</div>` + filtered.map(ex => 
+    `<div class="ex-item" id="ex-${ex.id}" onclick="selEx(${ex.id})">
+       <div style="display:flex; flex-direction:column;">
+         <span>${ex.name}</span>
+         <span style="font-size:10px; color:#888;">${ex.category} / ${ex.desc}</span>
+       </div>
+       <span>${Math.floor(ex.rate * 10)}円/分</span>
+    </div>`
+  ).join('');
+}
+
+function filterExercises() {
+  const q = document.getElementById('search-ex').value;
+  renderExerciseList(q);
+}
+
+let currentEx = null;
+function selEx(id) {
+  playSound('click');
+  currentEx = EXERCISE_DB.find(e => e.id === id);
+  document.querySelectorAll('.ex-item').forEach(el => el.classList.remove('selected'));
+  document.querySelectorAll(`#ex-${id}`).forEach(el => el.classList.add('selected'));
+}
+
+function setFood(v) { playSound('click'); document.getElementById('input-food').value = v; }
+
+function submitFood() {
+  const v = parseInt(document.getElementById('input-food').value);
+  if(!v) return;
+  if(v < FOOD_MIN_YEN) {
+    playSound('damage');
+    alert(`ズルはだめじゃ！自炊や軽食でも最低 ${FOOD_MIN_YEN}円 換算じゃぞ！`);
+    return;
+  }
+  
+  state.balance -= v;
+  state.lastMealTime = Date.now();
+  state.stageFoodTotal += v;
+  
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  state.logs.unshift({ label: '🍖 食事', val: -v, time: timeStr });
+  if(state.logs.length > 5) state.logs.pop();
+  
+  checkQuests('food_count', 1);
+  
+  if(v >= 2000) { showGouyuuBonus(); } else { playSound('coin'); showToast(`-${v}円`); }
+  
+  finishAction('modal-food', 'food');
+}
+
+function submitExercise() {
+  if(!currentEx) return;
+  const v = parseInt(document.getElementById('input-ex').value);
+  if(!v) return;
+  if (state.todayExerciseMins + v > EX_MAX_MINS) {
+    playSound('damage');
+    alert(`働きすぎじゃ！1日の運動上限は合計 ${EX_MAX_MINS} 分までじゃぞ！\n（本日は既に ${state.todayExerciseMins}分 記録済み）`);
+    return;
+  }
+  
+  state.recentExercises = [currentEx.id, ...state.recentExercises.filter(id => id !== currentEx.id)].slice(0, 5);
+  
+  const EX_RATE_MULTIPLIER = 10;
+  let earn = Math.floor(currentEx.rate * v * EX_RATE_MULTIPLIER);
+  
+  if (state.placedItems && state.placedItems.floorLeft === 'dumbbell') {
+    earn = Math.floor(earn * 1.1);
+  }
+  
+  let bonusStr = "";
+  let streakMultiplier = 1.2;
+  if (state.placedItems && state.placedItems.wallRight === 'calendar') {
+    streakMultiplier = 1.3;
+  }
+  if((state.loginStreak || 0) >= 3) {
+    earn = Math.floor(earn * streakMultiplier);
+    bonusStr = " (🔥ボーナス)";
+  }
+  
+  state.balance += earn;
+  if(!state.todayExercised) {
+    checkQuests('ex_days', 1); 
+  }
+  
+  state.todayExercised = true;
+  state.todayExerciseMins += v;
+  state.stageExTotal += v;
+  
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  state.logs.unshift({ label: `⚔️ ${currentEx.name}${bonusStr}`, val: earn, time: timeStr });
+  if(state.logs.length > 5) state.logs.pop();
+  
+  checkQuests('ex_count', 1);
+  checkQuests('ex_mins', v);
+  checkQuests('ex_spec', v, currentEx.id);
+  
+  playSound('coin');
+  showToast(`+${earn}円`);
+  finishAction('modal-ex', 'ex');
+}
+
+function finishAction(modalId, actionType) {
+  updateStage();
+  calcPattern();
+  saveState();
+  closeModal(modalId);
+  render();
+  playActionAnimation(actionType);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.innerText = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display='none', 2000);
+}
+
+function showGouyuuBonus() {
+  playSound('fanfare');
+  showToast('✨豪遊ボーナス！心は満たされた！✨');
+  const effect = document.getElementById('bonus-effect');
+  effect.style.display = 'flex';
+  effect.innerHTML = '🍖✨💎'.split('').map((e,i) => `<div class="sparkle" style="left:${30+i*20}%; animation-delay:${i*0.2}s">${e}</div>`).join('');
+  setTimeout(() => { effect.style.display = 'none'; effect.innerHTML = ''; }, 2000);
+}
+
+let cX = 50, cY = 50; 
+let tX = 50, tY = 50; 
+let scaleX = 1;
+let isActionPlaying = false;
+
+// --- 計測ツール ---
+let timerInterval = null;
+let timerMode = 'sw';
+let timerSeconds = 0;
+let timerRunning = false;
+let timerTarget = 0;
+
+function switchTimerMode(mode) {
+  playSound('click');
+  timerMode = mode;
+  resetTimer();
+  document.getElementById('tab-sw').style.background = mode === 'sw' ? 'var(--highlight)' : 'var(--panel-bg)';
+  document.getElementById('tab-tm').style.background = mode === 'tm' ? 'var(--highlight)' : 'var(--panel-bg)';
+  document.getElementById('tm-input-area').style.display = mode === 'tm' ? 'block' : 'none';
+}
+
+function openTimer() {
+  initAudio(); playSound('click');
+  updateTimerDisplay();
+  document.getElementById('modal-timer').classList.add('open');
+}
+
+function updateTimerDisplay() {
+  const display = document.getElementById('timer-display');
+  let s = timerMode === 'sw' ? timerSeconds : Math.max(0, timerTarget - timerSeconds);
+  
+  if (timerMode === 'tm' && timerSeconds === 0 && !timerRunning) {
+     const val = parseInt(document.getElementById('tm-input').value) || 0;
+     s = val * 60;
+  }
+  
+  const m = Math.floor(s / 60).toString().padStart(2, '0');
+  const sec = (s % 60).toString().padStart(2, '0');
+  display.innerText = `${m}:${sec}`;
+  
+  if (timerMode === 'tm' && timerRunning && s <= 0) {
+    toggleTimer();
+    playSound('fanfare');
+    alert("⏳ タイマー終了じゃ！お疲れ様！");
+  }
+}
+
+function toggleTimer() {
+  playSound('click');
+  const btn = document.getElementById('btn-timer-start');
+  if (timerRunning) {
+    clearInterval(timerInterval);
+    timerRunning = false;
+    btn.innerText = '再開';
+    btn.style.background = '#f1c40f';
+  } else {
+    if (timerMode === 'tm' && timerSeconds === 0) {
+      const val = parseInt(document.getElementById('tm-input').value) || 0;
+      if(val <= 0) return;
+      timerTarget = val * 60;
+    }
+    timerInterval = setInterval(() => {
+      timerSeconds++;
+      updateTimerDisplay();
+    }, 1000);
+    timerRunning = true;
+    btn.innerText = 'ストップ';
+    btn.style.background = '#e67e22';
+  }
+}
+
+function resetTimer() {
+  if(timerSeconds > 0) playSound('click');
+  clearInterval(timerInterval);
+  timerRunning = false;
+  timerSeconds = 0;
+  const btn = document.getElementById('btn-timer-start');
+  btn.innerText = 'スタート';
+  btn.style.background = '#f1c40f';
+  updateTimerDisplay();
+}
+
+function recordTimerTime() {
+  playSound('click');
+  if (timerRunning) toggleTimer();
+  
+  if(timerSeconds === 0) {
+    alert('まだ時間が経っておらんぞ！スタートボタンを押して時間を計るのじゃ！');
+    return;
+  }
+  
+  // 秒数を分に切り上げ（優しい仕様：10秒でも1分になる）
+  let mins = Math.ceil(timerSeconds / 60);
+  
+  closeModal('modal-timer');
+  openExercise();
+  
+  setTimeout(() => {
+    document.getElementById('input-ex').value = mins;
+    showToast(`⏱️ ${mins}分 でセットしたぞい！運動を選んで決定じゃ！`);
+  }, 100);
+}
+
+function startWandering() {
+  const chara = document.getElementById('chara-img');
+  setInterval(() => {
+    if(Math.random() < 0.6 && !isActionPlaying) {
+      tX = Math.random() * 60 + 20; 
+      tY = Math.random() * 60 + 20; 
+    }
+  }, 2500);
+
+  function animate() {
+    if(!isActionPlaying) {
+      let dx = tX - cX;
+      let dy = tY - cY;
+      
+      if(Math.abs(dx) > 0.5) {
+        cX += dx * 0.03;
+        scaleX = dx > 0 ? -1 : 1; 
+        chara.classList.remove('anim-idle');
+      } else {
+        chara.classList.add('anim-idle');
+      }
+      if(Math.abs(dy) > 0.5) cY += dy * 0.03;
+
+      chara.style.left = cX + '%';
+      chara.style.top = cY + '%';
+      chara.style.transform = `translate(-50%, -50%) scaleX(${scaleX})`;
+    }
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+function playActionAnimation(type) {
+  isActionPlaying = true;
+  const chara = document.getElementById('chara-img');
+  const view = document.getElementById('chara-view');
+  
+  chara.classList.remove('anim-idle', 'anim-walk');
+  
+  const actionsFood = ['anim-eat'];
+  const actionsEx = ['anim-spin', 'anim-squat'];
+  const itemsFood = ['🍖','🍎','🍔','🍰','🍙'];
+  const itemsEx = ['💪','🏋️','🏃','🔥','💦'];
+  
+  let animClass, emoji;
+  if(type === 'food') {
+    animClass = actionsFood[Math.floor(Math.random()*actionsFood.length)];
+    emoji = itemsFood[Math.floor(Math.random()*itemsFood.length)];
+  } else {
+    animClass = actionsEx[Math.floor(Math.random()*actionsEx.length)];
+    emoji = itemsEx[Math.floor(Math.random()*itemsEx.length)];
+  }
+  
+  const item = document.createElement('div');
+  item.className = 'falling-item';
+  item.innerText = emoji;
+  item.style.left = cX + '%';
+  view.appendChild(item);
+  
+  chara.classList.add(animClass);
+  
+  setTimeout(() => {
+    chara.classList.remove(animClass);
+    if(item.parentNode) item.parentNode.removeChild(item);
+    isActionPlaying = false;
+  }, 1200);
+}
+
+// --- ポンコツハプニングイベントの定義 ---
+const HAPPENING_EVENTS = [
+  {
+    id: 'socks',
+    title: '🧦 靴下探しの大疾走',
+    desc: '靴下が片方見つからず、部屋を10分間走り回って探した！ご主人様はくたくたじゃ。\n日常活動「掃除・片付け」を10分したことになり、運動時間に追加され、報酬100円を獲得したぞい！',
+    effect: (s) => {
+      s.balance += 100;
+      s.todayExerciseMins = Math.min(240, s.todayExerciseMins + 10);
+      s.stageExTotal += 10;
+      s.logs.unshift({ label: '🎲 靴下探し(10分)', val: 100, time: '朝' });
+    }
+  },
+  {
+    id: 'pudding',
+    title: '🍮 深夜のつまみ食い',
+    desc: '夜中に冷蔵庫のプリン（300円）をつまみ食いした！\n美味しかったが、お財布から300円減ったぞい。しかし、餓死タイマーは全回復じゃ！',
+    effect: (s) => {
+      s.balance = Math.max(0, s.balance - 300);
+      s.lastMealTime = Date.now();
+      s.logs.unshift({ label: '🎲 つまみ食い', val: -300, time: '夜' });
+    }
+  },
+  {
+    id: 'coin',
+    title: '🪙 自動販売機の下の奇跡',
+    desc: 'ご主人様が自動販売機の下を覗いたら、なんと100円玉を見つけた！\n今日はラッキーな日じゃな！ (+100円)',
+    effect: (s) => {
+      s.balance += 100;
+      s.logs.unshift({ label: '🎲 100円拾った！', val: 100, time: '昼' });
+    }
+  },
+  {
+    id: 'osaisen',
+    title: '⛩️ ポンコツなお祈り',
+    desc: '健康を求めてお祈りしていたら、神棚のバランスが崩れてお賽銭箱が頭の上に落ちてきた！痛い！（-100円）',
+    effect: (s) => {
+      s.balance = Math.max(0, s.balance - 100);
+      s.logs.unshift({ label: '🎲 お賽銭箱落下', val: -100, time: '朝' });
+    }
+  },
+  {
+    id: 'sashiire',
+    title: '🍲 おばちゃんの肉じゃが',
+    desc: '隣の部屋のおばちゃんが、作りすぎた肉じゃがを差し入れてくれた！\n満腹になり、餓死までの猶予時間が12時間回復したぞい！ありがたいのう。',
+    effect: (s) => {
+      s.lastMealTime = Math.min(Date.now(), s.lastMealTime + 12 * 3600 * 1000);
+    }
+  },
+  {
+    id: 'tsubo_event',
+    title: '🏺 謎の壺の恩恵',
+    desc: '部屋に置いた謎の壺が怪しく光り、中からお小遣いが出てきた！ (+500円)\nこれぞまさに壺のご利益じゃな！',
+    condition: (s) => s.placedItems && s.placedItems.floorLeft === 'tsubo',
+    effect: (s) => {
+      s.balance += 500;
+      s.logs.unshift({ label: '🎲 謎の壺の恩恵', val: 500, time: '夜' });
+    }
+  }
+];
+
+// --- 日記自動生成 ---
+function generateDiaryText() {
+  const ex = state.todayExerciseMins;
+  const food = state.stageFoodTotal;
+  const streak = state.loginStreak;
+  const charaName = CHARA_TYPES[state.charaId].name;
+  
+  let text = "";
+  if (ex === 0) {
+    text += `昨日は運動をまったくしなかったのじゃ。ご主人様はゴロゴロしておった。ポンコツめ…`;
+  } else {
+    text += `昨日はご主人様が${ex}分も運動してくれたぞい！${charaName}であるワシも大喜びじゃ。`;
+  }
+  
+  if (food >= 3000) {
+    text += ` しかも夜は${food}円も使って豪遊しおった！胃袋がポンコツになっておるぞい。`;
+  } else if (food === 0) {
+    text += ` しかし、昨日は何も食べていない気がするのう。餓死しそうでヒヤヒヤしたぞい。`;
+  } else {
+    text += ` 食事は${food}円分食べたのう。質素で健康的な生活じゃ。`;
+  }
+  
+  if (streak >= 3) {
+    text += ` 🔥現在連続運動は${streak}日目！この調子で頑張るのじゃ！`;
+  }
+  return text;
+}
+
+// --- 進化判定 ---
+function checkEvolution() {
+  let nextCharaId = state.charaId;
+  const wasStarving = (state.lastMealTime && (Date.now() - state.lastMealTime) / (1000 * 3600) >= STARVATION_WARNING_HOURS);
+  const isDebt = state.balance < 0;
+  
+  if (state.todayExerciseMins >= 60) {
+    nextCharaId = 6; 
+  } else if (state.todayExerciseMins >= 30 && state.loginStreak >= 3) {
+    nextCharaId = 8; 
+  } else if (state.stageFoodTotal >= 3000) {
+    nextCharaId = 9; 
+  } else if (isDebt || wasStarving) {
+    nextCharaId = Math.random() < 0.5 ? 2 : 5; 
+  } else if (state.todayExerciseMins >= 15 && state.stageFoodTotal <= 800) {
+    nextCharaId = 3; 
+  } else if (state.todayExerciseMins >= 15) {
+    nextCharaId = 7; 
+  } else if (state.stageFoodTotal >= 1500) {
+    nextCharaId = 1; 
+  } else {
+    nextCharaId = Math.random() < 0.5 ? 0 : 4; 
+  }
+  
+  if (state.charaId !== nextCharaId) {
+    state.charaId = nextCharaId;
+    if (!state.unlockedCharas) state.unlockedCharas = [];
+    if (!state.unlockedCharas.includes(nextCharaId)) {
+      state.unlockedCharas.push(nextCharaId);
+    }
+    return nextCharaId;
+  }
+  return null;
+}
+
+// --- 部屋アイテム(模様替え)の描画 ---
+function renderRoomItems() {
+  const slots = ['wallLeft', 'wallRight', 'floorLeft', 'floorRight'];
+  slots.forEach(slot => {
+    const el = document.getElementById(`slot-${slot}`);
+    if(!el) return;
+    const itemId = state.placedItems ? state.placedItems[slot] : null;
+    if(itemId) {
+      const item = SHOP_ITEMS.find(x => x.id === itemId);
+      el.innerText = item ? item.emoji : '';
+      el.style.display = 'block';
+    } else {
+      el.innerText = '';
+      el.style.display = 'none';
+    }
+  });
+}
+
+// --- メニューモーダル制御 ---
+function openMenu() {
+  initAudio(); playSound('click');
+  document.getElementById('modal-menu').classList.add('open');
+}
+
+// --- 日記モーダル制御 ---
+function openDiary() {
+  playSound('click');
+  renderDiary();
+  document.getElementById('modal-diary').classList.add('open');
+}
+
+function renderDiary() {
+  const list = document.getElementById('diary-list');
+  if(!state.diaries || state.diaries.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#888;padding:20px;">まだ日記は書かれておらんぞい</div>';
+    return;
+  }
+  list.innerHTML = state.diaries.map(d => `
+    <div class="diary-item">
+      <div class="diary-date">📅 ${d.date}</div>
+      <div class="diary-text">${d.text}</div>
+    </div>
+  `).join('');
+}
+
+// --- もどき図鑑モーダル制御 ---
+function openZukan() {
+  playSound('click');
+  renderZukan();
+  document.getElementById('zukan-detail').style.display = 'none';
+  document.getElementById('modal-zukan').classList.add('open');
+}
+
+function renderZukan() {
+  const grid = document.getElementById('zukan-grid');
+  grid.innerHTML = CHARA_TYPES.map(ch => {
+    const isUnlocked = state.unlockedCharas && state.unlockedCharas.includes(ch.id);
+    if(isUnlocked) {
+      let filterStr = `hue-rotate(${ch.hue}deg)`;
+      if(ch.invert) filterStr += ' invert(100%)';
+      if(ch.gray) filterStr += ' grayscale(100%)';
+      if(ch.contrast) filterStr += ` contrast(${ch.contrast})`;
+      
+      return `
+        <div class="zukan-card" onclick="showZukanDetail(${ch.id})">
+          <img src="chara_pop.png" style="filter: ${filterStr};">
+          <div>${ch.name}</div>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="zukan-card locked">
+          <span style="font-size:24px; line-height:48px;">❓</span>
+          <div>未開放</div>
+        </div>
+      `;
+    }
+  }).join('');
+}
+
+function showZukanDetail(id) {
+  playSound('click');
+  const ch = CHARA_TYPES.find(x => x.id === id);
+  const detail = CHARA_DETAILS.find(x => x.id === id);
+  const el = document.getElementById('zukan-detail');
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div class="zukan-detail-title">🦖 ${ch.name}</div>
+    <div style="font-size:13px; line-height:1.4; color:#333;">${detail ? detail.desc : '謎に包まれたポンコツもどきじゃ。'}</div>
+  `;
+}
+
+// --- ショップ＆模様替えモーダル制御 ---
+function openShop() {
+  playSound('click');
+  renderShop();
+  document.getElementById('modal-shop').classList.add('open');
+}
+
+function renderShop() {
+  const list = document.getElementById('shop-list');
+  list.innerHTML = SHOP_ITEMS.map(item => {
+    const isOwned = state.ownedItems && state.ownedItems.includes(item.id);
+    const isPlaced = state.placedItems && state.placedItems[item.slot] === item.id;
+    
+    let actionBtn = '';
+    if (isOwned) {
+      if (isPlaced) {
+        actionBtn = `<button class="btn" style="background:#e74c3c; color:#fff; padding:6px 12px; font-size:13px; flex:0 0 80px;" onclick="toggleItem('${item.id}', false)">片付ける</button>`;
+      } else {
+        actionBtn = `<button class="btn btn-ex" style="padding:6px 12px; font-size:13px; flex:0 0 80px;" onclick="toggleItem('${item.id}', true)">配置する</button>`;
+      }
+    } else {
+      actionBtn = `<button class="btn btn-food" style="padding:6px 12px; font-size:13px; flex:0 0 80px;" onclick="buyItem('${item.id}')">購入<br>${item.price}円</button>`;
+    }
+    
+    return `
+      <div class="shop-item">
+        <span style="font-size:32px; margin-right:8px; flex:0 0 40px; text-align:center;">${item.emoji}</span>
+        <div class="shop-item-info">
+          <div class="shop-item-title">${item.name} <span style="font-size:10px; color:#888; background:#eee; padding:1px 4px; border-radius:3px;">${item.slot === 'wallLeft'||item.slot==='wallRight' ? '壁' : '床'}</span></div>
+          <div class="shop-item-desc">${item.desc}</div>
+        </div>
+        ${actionBtn}
+      </div>
+    `;
+  }).join('');
+}
+
+function buyItem(id) {
+  const item = SHOP_ITEMS.find(x => x.id === id);
+  if(!item) return;
+  if(state.balance < item.price) {
+    playSound('damage');
+    alert('お金が足りないぞい！運動して稼ぐのじゃ！');
+    return;
+  }
+  state.balance -= item.price;
+  if(!state.ownedItems) state.ownedItems = [];
+  state.ownedItems.push(id);
+  playSound('fanfare');
+  showToast(`${item.name}を購入したぞい！`);
+  updateStage();
+  saveState();
+  renderShop();
+  render();
+}
+
+function toggleItem(id, toPlace) {
+  const item = SHOP_ITEMS.find(x => x.id === id);
+  if(!item) return;
+  
+  if(!state.placedItems) state.placedItems = { wallLeft: null, wallRight: null, floorLeft: null, floorRight: null };
+  
+  if (toPlace) {
+    state.placedItems[item.slot] = id;
+    playSound('coin');
+    showToast(`${item.name}を配置したぞい！`);
+  } else {
+    state.placedItems[item.slot] = null;
+    playSound('click');
+    showToast(`${item.name}を片付けたぞい！`);
+  }
+  
+  renderRoomItems();
+  saveState();
+  renderShop();
+  render();
+}
+
+// --- 設定モーダル制御 ---
+function openConfig() {
+  playSound('click');
+  document.getElementById('config-sound').checked = state.soundEnabled;
+  document.getElementById('config-name-input').value = state.charaId !== undefined ? CHARA_TYPES[state.charaId].name : '';
+  document.getElementById('modal-config').classList.add('open');
+}
+
+function toggleSound(enabled) {
+  state.soundEnabled = enabled;
+  saveState();
+  if (enabled) {
+    initAudio();
+    playSound('click');
+  }
+}
+
+function changeCharaName() {
+  const newName = document.getElementById('config-name-input').value.trim();
+  if(!newName) return;
+  if(newName.length > 10) {
+    alert('名前は10文字以内にするのじゃ！');
+    return;
+  }
+  
+  CHARA_TYPES[state.charaId].name = newName;
+  document.getElementById('ui-chara-name').innerText = newName;
+  playSound('fanfare');
+  showToast('名前を変更したぞい！');
+  saveState();
+}
+
+init();
+setInterval(checkDeath, 60000);
+</script>
+</body>
+</html>
